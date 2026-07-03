@@ -481,6 +481,79 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       </div>
     </div>
 
+    <!-- ロット編集モーダル -->
+    <div id="lot-edit-wrap" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:20px 0">
+      <div style="background:var(--surface-2,#fff);border-radius:16px;margin:0 12px;padding:0 0 24px">
+        <div style="display:flex;align-items:center;padding:16px 16px 12px;border-bottom:0.5px solid var(--border)">
+          <span style="font-size:15px;font-weight:500;color:var(--text);flex:1">ロット情報を修正</span>
+          <button onclick="closeLotEdit()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px"><i class="ti ti-x"></i></button>
+        </div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+          <input type="hidden" id="edit-lot-idx">
+          <div>
+            <div class="lbl">製品名</div>
+            <select class="sel-f" id="edit-lot-prod">
+              <optgroup label="生ハム">
+                <option value="HH-GH-001|プロシュート">プロシュート</option>
+                <option value="HH-GH-002|コテレート">コテレート</option>
+                <option value="HH-GH-003|コッパ">コッパ</option>
+                <option value="HH-GH-004|パンチェッタ">パンチェッタ</option>
+                <option value="HH-GH-005|サラミ">サラミ</option>
+                <option value="HH-GH-006|白カビサラミ">白カビサラミ</option>
+              </optgroup>
+              <optgroup label="ハム">
+                <option value="HH-HA-001|ロースハム">ロースハム</option>
+                <option value="HH-HA-002|ボンレスハム">ボンレスハム</option>
+                <option value="HH-HA-003|ベーコン">ベーコン</option>
+                <option value="HH-HA-004|スモークタン">スモークタン</option>
+                <option value="HH-HA-005|スモークレバー">スモークレバー</option>
+                <option value="HH-HA-006|赤ジャーキー">赤ジャーキー</option>
+                <option value="HH-HA-007|黒ジャーキー">黒ジャーキー</option>
+              </optgroup>
+              <optgroup label="ソーセージ">
+                <option value="HH-SA-001|ポークウィンナー">ポークウィンナー</option>
+                <option value="HH-SA-002|あらびきウィンナー">あらびきウィンナー</option>
+                <option value="HH-SA-003|チョリソー">チョリソー</option>
+                <option value="HH-SA-004|ハーブウィンナー">ハーブウィンナー</option>
+                <option value="HH-SA-005|ぐるぐるソーセージ">ぐるぐるソーセージ</option>
+                <option value="HH-SA-006|骨付きフランク">骨付きフランク</option>
+                <option value="HH-SA-007|フランク">フランク</option>
+                <option value="HH-SA-008|ヴァイスブルスト">ヴァイスブルスト</option>
+                <option value="HH-SA-009|焼きソーセージ">焼きソーセージ</option>
+                <option value="HH-SA-010|ボロニアソーセージ">ボロニアソーセージ</option>
+                <option value="HH-SA-011|パプリカリオナ">パプリカリオナ</option>
+                <option value="HH-SA-012|ハーブソーセージ">ハーブソーセージ</option>
+                <option value="HH-SA-013|ケーゼ">ケーゼ</option>
+              </optgroup>
+              <optgroup label="メンチ">
+                <option value="HH-ME-001|メンチ">メンチ</option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <div class="lbl">原料ロット番号</div>
+            <input type="text" class="inp" id="edit-lot-rawid" placeholder="例）HB-RL-20260703-01">
+          </div>
+          <div>
+            <div class="lbl">製造数量</div>
+            <input type="number" class="inp" id="edit-lot-qty" placeholder="例）50" inputmode="numeric">
+          </div>
+          <div>
+            <div class="lbl">賞味期限</div>
+            <input type="date" class="inp" id="edit-lot-exp">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-g" style="flex:1" onclick="saveLotEdit()">
+              <i class="ti ti-device-floppy"></i> 保存
+            </button>
+            <button class="btn" style="flex:1;background:var(--bg2)" onclick="closeLotEdit()">
+              キャンセル
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 登録済みロット -->
     <div class="card">
       <div class="ch"><i class="ti ti-list" style="font-size:18px;color:var(--blue)"></i><span class="cht">登録済みロット</span><span class="chs" id="lot-count">0件</span></div>
@@ -713,6 +786,7 @@ function onDateChange(){
   const rawDateEl=document.getElementById('raw-date');
   if(rawDateEl){ rawDateEl.value=v; updateRawPreview(); }
   updateMfgId();
+  updateShipLotSel();
   const isPast=activeDate!==todayStr;
   document.getElementById('past-label').style.display=isPast?'':'none';
   document.getElementById('past-banner').classList.toggle('show',isPast);
@@ -798,7 +872,7 @@ function bumpNG(){
 }
 
 const lots=[];
-const shipDests=['道の駅まえばし赤城直売','道の駅まえばし赤城レストラン','スノーピークキャンピングフィールド','ビジターセンター','さんぽ道','前橋百貨','EC','ふるさと納税','その他'];
+const shipDests=['とんとん広場','ヒュッテハヤシ','道の駅まえばし赤城直売','道の駅まえばし赤城レストラン','スノーピークキャンピングフィールド','ビジターセンター','さんぽ道','前橋百貨','EC','ふるさと納税','その他'];
 const shipments=[];
 function regLot(){
   const selVal = document.getElementById('lot-prod-sel').value;
@@ -905,7 +979,23 @@ function renderLots(){
   const list=document.getElementById('lot-list');
   document.getElementById('lot-count').textContent=lots.length+'件';
   if(!lots.length){list.innerHTML='<div style="padding:16px;text-align:center"><span class="empty-msg">まだロットが登録されていません</span></div>';return;}
-  list.innerHTML=lots.slice().reverse().map(l=>`<div class="lot-row"><div><div class="lot-id">${l.mfgid}</div><div style="font-size:11px;color:var(--text2)">${fmtDisp(l.date)} | 原料: ${l.rawid}</div></div><div style="flex:1;padding-left:6px"><span class="ptag">${l.prod}</span>${l.qty?l.qty+'個':''}</div><div style="font-size:11px;color:var(--text2)">${l.exp||''}</div></div>`).join('');
+  // 逆順インデックスで編集できるように元のインデックスを保持
+  const reversed=[...lots.map((l,i)=>({...l,_i:i}))].reverse();
+  list.innerHTML=reversed.map(l=>`
+    <div class="lot-row" style="align-items:flex-start">
+      <div style="flex:1">
+        <div class="lot-id">${l.mfgid}</div>
+        <div style="font-size:11px;color:var(--text2)">${fmtDisp(l.date)} | 原料: ${l.rawid||'—'}</div>
+        <div style="font-size:11px;color:var(--text2)">数量: ${l.qty||'—'}個　賞味: ${l.exp||'—'}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;padding-left:8px">
+        <span class="ptag">${l.prod}</span>
+        <button onclick="editLot(${l._i})"
+          style="background:none;border:1px solid var(--border);border-radius:var(--radius);padding:3px 8px;font-size:11px;color:var(--text2);cursor:pointer">
+          <i class="ti ti-edit"></i> 修正
+        </button>
+      </div>
+    </div>`).join('');
 }
 
 // ── 中心温度管理（CCP追跡）──────────────────────────────────
@@ -1346,11 +1436,35 @@ function updateShipLotSel() {
   const sel = document.getElementById('ship-lot');
   if(!sel) return;
   const prev = sel.value;
-  sel.innerHTML = '<option value="">-- ロットを選択 --</option>';
-  lots.slice().reverse().forEach(l => {
+  // activeDate（選択中の日付）から10日前をカットオフとする
+  const base = activeDate; // YYYYMMDD形式
+  const bd = new Date(
+    parseInt(base.slice(0,4)),
+    parseInt(base.slice(4,6))-1,
+    parseInt(base.slice(6,8))
+  );
+  bd.setDate(bd.getDate() - 10);
+  const cutoff = `${bd.getFullYear()}${String(bd.getMonth()+1).padStart(2,'0')}${String(bd.getDate()).padStart(2,'0')}`;
+  // 10日以内のロットだけ抽出（製造ロット番号の日付部分で判定）
+  const recent = [...lots].reverse().filter(l => {
+    // mfgid例: HH-SA-001-20260703-01 → 日付部分は4番目の要素
+    const parts = l.mfgid.split('-');
+    const dateStr = parts.length >= 4 ? parts[3] : '';
+    return dateStr >= cutoff;
+  });
+  sel.innerHTML = recent.length
+    ? '<option value="">-- ロットを選択（直近10日）--</option>'
+    : '<option value="">-- 直近10日のロットなし --</option>';
+  recent.forEach(l => {
     const opt = document.createElement('option');
     opt.value = l.mfgid;
-    opt.textContent = `${l.mfgid}（${l.prod}）`;
+    // 製造日付を読みやすく表示
+    const parts = l.mfgid.split('-');
+    const ds = parts.length >= 4 ? parts[3] : '';
+    const dateDisp = ds.length === 8
+      ? `${ds.slice(0,4)}/${ds.slice(4,6)}/${ds.slice(6,8)}`
+      : '';
+    opt.textContent = `${dateDisp} ${l.mfgid}（${l.prod}）`;
     sel.appendChild(opt);
   });
   if(prev) sel.value = prev;
@@ -1546,6 +1660,50 @@ function clearRawLots(){
   document.getElementById('raw-date').value = '';
   document.getElementById('raw-seq').value  = '';
   updateRawPreview();
+}
+
+
+// ── ロット編集 ────────────────────────────────────────
+function editLot(idx) {
+  const l = lots[idx];
+  if(!l) return;
+  document.getElementById('edit-lot-idx').value = idx;
+  // 製品セレクトを合わせる
+  const sel = document.getElementById('edit-lot-prod');
+  const target = `${l.code}|${l.prod}`;
+  for(let i=0; i<sel.options.length; i++){
+    if(sel.options[i].value === target){ sel.selectedIndex=i; break; }
+  }
+  document.getElementById('edit-lot-rawid').value = l.rawid || '';
+  document.getElementById('edit-lot-qty').value   = l.qty   || '';
+  document.getElementById('edit-lot-exp').value   = l.exp   || '';
+  document.getElementById('lot-edit-wrap').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLotEdit() {
+  document.getElementById('lot-edit-wrap').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function saveLotEdit() {
+  const idx    = parseInt(document.getElementById('edit-lot-idx').value);
+  const selVal = document.getElementById('edit-lot-prod').value;
+  const rawid  = document.getElementById('edit-lot-rawid').value;
+  const qty    = document.getElementById('edit-lot-qty').value;
+  const exp    = document.getElementById('edit-lot-exp').value;
+  if(isNaN(idx) || !lots[idx]) { toast('⚠ ロットが見つかりません'); return; }
+  const prod = selVal.split('|')[1];
+  const code = selVal.split('|')[0];
+  lots[idx] = { ...lots[idx], prod, code, rawid, qty, exp };
+  renderLots();
+  updateCtLotSel();
+  updateShipLotSel();
+  // Supabase更新
+  apiUpsert('haccp_lots', { ...lots[idx], factory: FACTORY });
+  addLog('ok', `ロット修正: ${lots[idx].mfgid} (${prod})`);
+  toast(`ロット修正: ${lots[idx].mfgid}`);
+  closeLotEdit();
 }
 
 </script>
