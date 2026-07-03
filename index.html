@@ -296,10 +296,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
           <div style="font-size:11px;color:var(--text2);margin-top:3px">変更するとロット番号が更新されます</div>
         </div>
 
-        <div><div class="lbl">原料受入日</div><input type="date" class="inp" id="lot-indate"></div>
+        <!-- 原料受入日はraw-dateと連動（非表示） -->
+        <input type="hidden" id="lot-indate">
         <!-- 原料ロット番号（複数登録可） -->
         <div>
-          <div class="lbl">原料ロット番号（林牧場）</div>
+          <div class="lbl">原料ロット番号・受入日（林牧場）</div>
 
           <!-- 入力エリア -->
           <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
@@ -403,14 +404,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
         <span class="chs" id="dest-count">0件</span>
       </div>
       <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;flex-direction:column;gap:8px">
           <input type="text" class="inp" id="dest-new-name"
-            placeholder="出荷先名を入力（例：〇〇農協）"
-            style="flex:1"
+            placeholder="出荷先名を入力"
+            style="font-size:16px;padding:12px 14px"
             onkeydown="if(event.key==='Enter')addDest()">
-          <button class="btn btn-g" style="margin-top:0;white-space:nowrap;padding:0 14px"
+          <button class="btn btn-g" style="margin-top:0;padding:12px"
             onclick="addDest()">
-            <i class="ti ti-plus"></i> 追加
+            <i class="ti ti-plus"></i> 出荷先を追加
           </button>
         </div>
         <div id="dest-list" style="display:flex;flex-direction:column;gap:4px"></div>
@@ -797,7 +798,7 @@ function bumpNG(){
 }
 
 const lots=[];
-const shipDests=['直売所','赤城山ふれあいの家','ファーマーズマーケット','その他'];
+const shipDests=['道の駅まえばし赤城直売','道の駅まえばし赤城レストラン','スノーピークキャンピングフィールド','ビジターセンター','さんぽ道','前橋百貨','EC','ふるさと納税','その他'];
 const shipments=[];
 function regLot(){
   const selVal = document.getElementById('lot-prod-sel').value;
@@ -1462,8 +1463,11 @@ function loadDestsLocal() {
     const saved = localStorage.getItem('hh_ship_dests');
     if(saved) {
       const arr = JSON.parse(saved);
-      shipDests.length = 0;
-      arr.forEach(d => shipDests.push(d));
+      if(arr.length > 0) {
+        shipDests.length = 0;
+        arr.forEach(d => shipDests.push(d));
+      }
+      // localStorageが空なら初期値（shipDests）をそのまま使用
     }
   } catch(e) {}
 }
@@ -1498,6 +1502,9 @@ function addRawLot(){
   const lotId   = `${buiv}-${dateStr}-${seqStr}`;
   if(rawLotList.includes(lotId)){ toast('⚠ 同じロット番号が既に追加されています'); return; }
   rawLotList.push(lotId);
+  // 原料ロット日付を受入日として自動セット
+  const indateEl = document.getElementById('lot-indate');
+  if(indateEl) indateEl.value = date;
   renderRawLotList();
   // 連番をクリアして次の入力に備える
   document.getElementById('raw-seq').value = '';
