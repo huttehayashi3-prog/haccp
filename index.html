@@ -243,6 +243,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 <!-- 追跡タブ -->
 <div id="tab-trace" class="tab">
   <div class="sec">
+
+    <!-- ロット登録 -->
     <div class="card">
       <div class="ch"><i class="ti ti-plus" style="font-size:18px;color:var(--blue)"></i><span class="cht">新規ロット登録</span></div>
       <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
@@ -256,10 +258,66 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
         <button class="btn btn-g" onclick="regLot()"><i class="ti ti-plus"></i> ロットを登録</button>
       </div>
     </div>
+
+    <!-- 中心温度管理（CCP追跡） -->
+    <div class="card">
+      <div class="ch">
+        <i class="ti ti-thermometer" style="font-size:18px;color:var(--red)"></i>
+        <span class="cht">中心温度管理（CCP追跡）</span>
+        <span class="chs">基準：75℃以上</span>
+      </div>
+      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+        <div><div class="lbl">製造ロット番号</div>
+          <select class="sel-f" id="ct-lot-sel">
+            <option value="">-- ロットを選択 --</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><div class="lbl">加熱開始時刻</div><input type="time" class="inp" id="ct-start"></div>
+          <div><div class="lbl">加熱終了時刻</div><input type="time" class="inp" id="ct-end"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <div class="lbl">中心温度（℃）</div>
+            <input type="number" class="inp" id="ct-temp" placeholder="75.0" inputmode="decimal" step="0.1" oninput="chkCtTemp()">
+          </div>
+          <div>
+            <div class="lbl">測定箇所</div>
+            <select class="sel-f" id="ct-point">
+              <option>中心部</option><option>最冷部</option><option>表面</option>
+            </select>
+          </div>
+        </div>
+        <div><div class="lbl">担当者</div><input type="text" class="inp" id="ct-staff" placeholder="氏名"></div>
+        <div><div class="lbl">備考</div><input type="text" class="inp" id="ct-note" placeholder="異常・対応処置など"></div>
+
+        <!-- 判定表示 -->
+        <div id="ct-judge" style="display:none;padding:10px 12px;border-radius:var(--radius);text-align:center;font-size:14px;font-weight:600;"></div>
+
+        <button class="btn" id="ct-save-btn" onclick="saveCT()" disabled style="opacity:.5">
+          <i class="ti ti-device-floppy"></i> 中心温度を記録・保存
+        </button>
+      </div>
+    </div>
+
+    <!-- 中心温度記録一覧 -->
+    <div class="card">
+      <div class="ch">
+        <i class="ti ti-list-check" style="font-size:18px;color:var(--blue)"></i>
+        <span class="cht">中心温度記録一覧</span>
+        <span class="chs" id="ct-count">0件</span>
+      </div>
+      <div id="ct-list">
+        <div style="padding:16px;text-align:center"><span class="empty-msg">記録がありません</span></div>
+      </div>
+    </div>
+
+    <!-- 登録済みロット -->
     <div class="card">
       <div class="ch"><i class="ti ti-list" style="font-size:18px;color:var(--blue)"></i><span class="cht">登録済みロット</span><span class="chs" id="lot-count">0件</span></div>
       <div id="lot-list"><div style="padding:16px;text-align:center"><span class="empty-msg">まだロットが登録されていません</span></div></div>
     </div>
+
   </div>
 </div>
 
@@ -296,6 +354,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     </div>
     <button class="btn" onclick="saveAll()"><i class="ti ti-device-floppy"></i> <span id="save-btn-label">本日の全記録を保存</span></button>
     <button class="btn btn-o" style="margin-top:8px" onclick="loadFromCloud()"><i class="ti ti-cloud-download"></i> クラウドから最新を取得</button>
+
+    <div style="margin-top:12px;background:var(--bg2);border-radius:var(--radius-lg);padding:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);padding-bottom:4px;border-bottom:0.5px solid var(--border)"><i class="ti ti-file-export"></i> CSV出力</div>
+      <button class="btn btn-o" style="margin-top:0" onclick="exportLotCSV()">
+        <i class="ti ti-table-export"></i> ロット一覧をCSV出力
+      </button>
+      <button class="btn btn-o" style="margin-top:0" onclick="exportAllCSV()">
+        <i class="ti ti-file-spreadsheet"></i> 全記録をまとめてCSV出力
+      </button>
+    </div>
   </div>
 </div>
 
@@ -537,7 +605,7 @@ function regLot(){
   if(!mfgid||!rawid){alert('ロット番号を入力してください');return;}
   const prod=document.getElementById('lot-prod').value;
   const lot={prod,indate:document.getElementById('lot-indate').value,rawid,mfgid,qty:document.getElementById('lot-qty').value,exp:document.getElementById('lot-exp').value,dest:document.getElementById('lot-dest').value,date:activeDate};
-  lots.push(lot);renderLots();addLog('ok',`ロット登録: ${mfgid} (${prod})`);
+  lots.push(lot);renderLots();updateCtLotSel();addLog('ok',`ロット登録: ${mfgid} (${prod})`);
   apiUpsert('haccp_lots',{...lot,factory:FACTORY});
   document.getElementById('lot-mfgid').value='';document.getElementById('lot-rawid').value='';document.getElementById('lot-qty').value='';
   toast('ロットを登録・同期しました');
@@ -548,6 +616,147 @@ function renderLots(){
   if(!lots.length){list.innerHTML='<div style="padding:16px;text-align:center"><span class="empty-msg">まだロットが登録されていません</span></div>';return;}
   list.innerHTML=lots.slice().reverse().map(l=>`<div class="lot-row"><div><div class="lot-id">${l.mfgid}</div><div style="font-size:11px;color:var(--text2)">${fmtDisp(l.date)} | 原料: ${l.rawid}</div></div><div style="flex:1;padding-left:6px"><span class="ptag">${l.prod}</span>${l.qty?l.qty+'個':''}</div><div style="font-size:11px;color:var(--text2)">${l.exp||''}</div></div>`).join('');
 }
+
+// ── 中心温度管理（CCP追跡）──────────────────────────────────
+const ctRecords = [];
+
+function updateCtLotSel() {
+  const sel = document.getElementById('ct-lot-sel');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">-- ロットを選択 --</option>';
+  lots.slice().reverse().forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l.mfgid;
+    opt.textContent = `${l.mfgid}（${l.prod}）`;
+    sel.appendChild(opt);
+  });
+  if(prev) sel.value = prev;
+}
+
+function chkCtTemp() {
+  const v = parseFloat(document.getElementById('ct-temp').value);
+  const judgeEl = document.getElementById('ct-judge');
+  const btn = document.getElementById('ct-save-btn');
+  if(isNaN(v)) {
+    judgeEl.style.display='none';
+    btn.disabled=true; btn.style.opacity='.5';
+    return;
+  }
+  judgeEl.style.display='block';
+  if(v >= 75) {
+    judgeEl.textContent = `✓ OK  ${v}℃ ≥ 75℃（基準クリア）`;
+    judgeEl.style.background='var(--green-bg)';
+    judgeEl.style.color='var(--green-text)';
+  } else {
+    judgeEl.textContent = `✗ NG  ${v}℃ < 75℃（是正処置が必要）`;
+    judgeEl.style.background='var(--red-bg)';
+    judgeEl.style.color='var(--red-text)';
+  }
+  btn.disabled=false; btn.style.opacity='1';
+}
+
+async function saveCT() {
+  const lotId = document.getElementById('ct-lot-sel').value;
+  const start = document.getElementById('ct-start').value;
+  const end   = document.getElementById('ct-end').value;
+  const temp  = parseFloat(document.getElementById('ct-temp').value);
+  const point = document.getElementById('ct-point').value;
+  const staff = document.getElementById('ct-staff').value;
+  const note  = document.getElementById('ct-note').value;
+
+  if(!lotId) { alert('ロットを選択してください'); return; }
+  if(isNaN(temp)) { alert('中心温度を入力してください'); return; }
+
+  const ok = temp >= 75;
+  const rec = {
+    lot_id: lotId, date: activeDate,
+    start_time: start, end_time: end,
+    center_temp: temp, measure_point: point,
+    staff, note, ok, recorded_at: new Date().toISOString()
+  };
+  ctRecords.push(rec);
+  renderCTList();
+  updateCtLotSel();
+
+  // Supabase保存
+  try {
+    setSyncStatus('syncing');
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/haccp_center_temps`, {
+      method:'POST',
+      headers:{...HEADERS,'Prefer':'return=minimal'},
+      body: JSON.stringify({
+        factory: FACTORY, date: activeDate, lot_id: lotId,
+        start_time: start, end_time: end,
+        center_temp: temp, measure_point: point,
+        is_ok: ok, staff, note
+      })
+    });
+    setSyncStatus(res.ok ? 'ok' : 'err');
+  } catch(e) { setSyncStatus('err'); }
+
+  addLog(ok ? 'ok' : 'ng',
+    `中心温度: ${lotId} ${temp}℃ ${ok?'OK':'NG'} [${point}]`);
+  if(!ok) bumpNG();
+  toast(ok ? `中心温度 ${temp}℃ OK — 記録しました` : `⚠ 中心温度 ${temp}℃ NG — 是正処置が必要`);
+
+  // フォームリセット
+  document.getElementById('ct-temp').value='';
+  document.getElementById('ct-note').value='';
+  document.getElementById('ct-judge').style.display='none';
+  document.getElementById('ct-save-btn').disabled=true;
+  document.getElementById('ct-save-btn').style.opacity='.5';
+}
+
+function renderCTList() {
+  const list = document.getElementById('ct-list');
+  const count = document.getElementById('ct-count');
+  count.textContent = ctRecords.length + '件';
+  if(!ctRecords.length) {
+    list.innerHTML='<div style="padding:16px;text-align:center"><span class="empty-msg">記録がありません</span></div>';
+    return;
+  }
+  list.innerHTML = ctRecords.slice().reverse().map(r => {
+    const bg = r.ok ? 'var(--green-bg)' : 'var(--red-bg)';
+    const fg = r.ok ? 'var(--green-text)' : 'var(--red-text)';
+    const icon = r.ok ? 'ti-check' : 'ti-alert-triangle';
+    const timeStr = r.start_time && r.end_time ? `${r.start_time}〜${r.end_time}` : r.start_time || '';
+    return `<div style="display:flex;align-items:flex-start;padding:10px 14px;border-bottom:0.5px solid var(--border);gap:10px">
+      <div style="width:28px;height:28px;border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">
+        <i class="ti ${icon}"></i>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${r.lot_id}</div>
+        <div style="font-size:12px;color:var(--text2)">${timeStr} | ${r.measure_point}</div>
+        ${r.note ? `<div style="font-size:11px;color:var(--text2)">${r.note}</div>` : ''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:16px;font-weight:700;color:${fg}">${r.center_temp}℃</div>
+        <div style="font-size:11px;color:${fg}">${r.ok?'OK':'NG'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadCTFromCloud() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/haccp_center_temps?factory=eq.${FACTORY}&date=eq.${activeDate}&order=recorded_at.desc`,
+      {headers:{...HEADERS,'Prefer':''}}
+    );
+    if(!res.ok) return;
+    const rows = await res.json();
+    ctRecords.length = 0;
+    rows.forEach(r => ctRecords.push({
+      lot_id: r.lot_id, date: r.date,
+      start_time: r.start_time, end_time: r.end_time,
+      center_temp: r.center_temp, measure_point: r.measure_point,
+      staff: r.staff, note: r.note, ok: r.is_ok,
+      recorded_at: r.recorded_at
+    }));
+    renderCTList();
+  } catch(e) {}
+}
+
 
 function openNG(){document.getElementById('ng-modal-wrap').classList.add('open')}
 function closeNG(){document.getElementById('ng-modal-wrap').classList.remove('open')}
@@ -643,6 +852,112 @@ function calNext(){if(calMonth===11){calMonth=0;calYear++;}else calMonth++;rende
 renderCal();
 loadDateData(todayStr);
 loadFromCloud();
+
+// ── CSV出力関数 ────────────────────────────────────────────
+function toCSV(headers, rows) {
+  const BOM = '\uFEFF'; // Excel文字化け防止
+  const escape = v => {
+    if(v === null || v === undefined) return '';
+    const s = String(v);
+    if(s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return '"' + s.replace(/"/g,'""') + '"';
+    }
+    return s;
+  };
+  const lines = [headers.map(escape).join(',')];
+  rows.forEach(row => lines.push(row.map(escape).join(',')));
+  return BOM + lines.join('\r\n');
+}
+
+function downloadCSV(content, filename) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(filename + ' をダウンロードしました');
+}
+
+function exportLotCSV() {
+  if(!lots.length) { toast('登録済みロットがありません'); return; }
+  const headers = ['製造ロット番号','製品種別','原料ロット番号(林牧場)','原料受入日','製造数量','賞味期限','出荷先','記録日付'];
+  const rows = lots.map(l => [
+    l.mfgid, l.prod, l.rawid, l.indate, l.qty, l.exp, l.dest, l.date
+  ]);
+  const today = activeDate;
+  downloadCSV(toCSV(headers, rows), `HH_ロット一覧_${today}.csv`);
+}
+
+function exportAllCSV() {
+  // シート1: 温度記録
+  const db = getDB();
+  const allDates = Object.keys(db).sort();
+
+  // ── ①温度記録 ──
+  const tempHeaders = ['日付','原料冷蔵庫(℃)','製品冷蔵庫(℃)','冷凍庫(℃)','製造室室温(℃)','加熱中心温度(℃)','特記事項'];
+  const tempRows = allDates.map(ds => {
+    const r = db[ds] || {};
+    const t = r.temps || {};
+    return [fmtDisp(ds), t.t1||'', t.t2||'', t.t3||'', t.t4||'', t.t5||'', r.tempNote||''];
+  });
+
+  // ── ②工程点検 ──
+  const procHeaders = ['日付','福豚受入温度確認','外観臭気確認','納品書ロット記録','機器洗浄消毒','添加物計量確認','製造ロット付与','シール気密確認','賞味期限表示','金属探知'];
+  const procRows = allDates.map(ds => {
+    const r = db[ds] || {};
+    const p = r.process || {};
+    return [fmtDisp(ds),
+      p.p1?'✓':'', p.p2?'✓':'', p.p3?'✓':'',
+      p.p4?'✓':'', p.p5?'✓':'', p.p6?'✓':'',
+      p.p7?'✓':'', p.p8?'✓':'', p.p9?'✓':''
+    ];
+  });
+
+  // ── ③衛生管理 ──
+  const hygHeaders = ['日付','体調不良者なし','手指傷炎症なし','作業服着用','床壁清潔','排水溝点検','手洗い設備補充','害虫防止設備'];
+  const hygRows = allDates.map(ds => {
+    const r = db[ds] || {};
+    const h = r.hygiene || {};
+    return [fmtDisp(ds),
+      h.h1?'✓':'', h.h2?'✓':'', h.h3?'✓':'',
+      h.h4?'✓':'', h.h5?'✓':'', h.h6?'✓':'', h.h7?'✓':''
+    ];
+  });
+
+  // ── ④中心温度記録 ──
+  const ctHeaders = ['記録日付','製造ロット番号','加熱開始','加熱終了','中心温度(℃)','測定箇所','判定','担当者','備考'];
+  const ctRows = ctRecords.map(r => [
+    fmtDisp(r.date), r.lot_id, r.start_time||'', r.end_time||'',
+    r.center_temp, r.measure_point, r.ok?'OK':'NG', r.staff||'', r.note||''
+  ]);
+
+  // ── ⑤ロット一覧 ──
+  const lotHeaders = ['製造ロット番号','製品種別','原料ロット番号','原料受入日','製造数量','賞味期限','出荷先','記録日付'];
+  const lotRows = lots.map(l => [
+    l.mfgid, l.prod, l.rawid, l.indate, l.qty, l.exp, l.dest, l.date
+  ]);
+
+  // 全シートを1ファイルに連結（空行で区切る）
+  const sections = [
+    ['■ 温度記録', ...toCSV(tempHeaders, tempRows).split('\r\n')],
+    [''],
+    ['■ 工程点検', ...toCSV(procHeaders, procRows).split('\r\n')],
+    [''],
+    ['■ 衛生管理', ...toCSV(hygHeaders, hygRows).split('\r\n')],
+    [''],
+    ['■ 中心温度記録（CCP）', ...toCSV(ctHeaders, ctRows).split('\r\n')],
+    [''],
+    ['■ ロット一覧', ...toCSV(lotHeaders, lotRows).split('\r\n')],
+  ];
+
+  const BOM = '\uFEFF';
+  const content = BOM + sections.flat().join('\r\n');
+  const today = activeDate;
+  downloadCSV(content.replace(BOM,''), `HH_全記録_${today}.csv`);
+}
+
 </script>
 </body>
 </html>
