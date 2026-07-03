@@ -528,11 +528,11 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const FACTORY='HutteHayashi';
 const HEADERS={'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'resolution=merge-duplicates'};
 
-const today=new Date();
-const todayStr=fmt(today);
+const todayDate=new Date();
+const todayStr=fmt(todayDate);
 let activeDate=todayStr;
-let calYear=today.getFullYear();
-let calMonth=today.getMonth();
+let calYear=todayDate.getFullYear();
+let calMonth=todayDate.getMonth();
 let localDB={};
 let cloudCalCache={};
 
@@ -541,8 +541,8 @@ function fmtDisp(s){return`${s.slice(0,4)}年${s.slice(4,6)}月${s.slice(6,8)}�
 function fmtTime(d){return`${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`}
 function now(){return fmtTime(new Date())}
 
-document.getElementById('active-date').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-document.getElementById('start-time').textContent=fmtTime(today);
+document.getElementById('active-date').value=`${todayDate.getFullYear()}-${String(todayDate.getMonth()+1).padStart(2,'0')}-${String(todayDate.getDate()).padStart(2,'0')}`;
+document.getElementById('start-time').textContent=fmtTime(todayDate);
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -674,7 +674,7 @@ function onDateChange(){
   loadDateData(activeDate);renderCal();
 }
 function goToday(){
-  document.getElementById('active-date').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.getElementById('active-date').value=`${todayDate.getFullYear()}-${String(todayDate.getMonth()+1).padStart(2,'0')}-${String(todayDate.getDate()).padStart(2,'0')}`;
   onDateChange();
 }
 
@@ -1122,8 +1122,7 @@ function exportLotCSV() {
   const rows = lots.map(l => [
     l.mfgid, l.prod, l.rawid, l.indate, l.qty, l.exp, l.dest, l.date
   ]);
-  const today = activeDate;
-  downloadCSV(toCSV(headers, rows), `HH_ロット一覧_${today}.csv`);
+  downloadCSV(toCSV(headers, rows), `HH_ロット一覧_${todayStr}.csv`);
 }
 
 function exportAllCSV() {
@@ -1190,8 +1189,7 @@ function exportAllCSV() {
 
   const BOM = '\uFEFF';
   const content = BOM + sections.flat().join('\r\n');
-  const today = activeDate;
-  downloadCSV(content.replace(BOM,''), `HH_全記録_${today}.csv`);
+  downloadCSV(content.replace(BOM,''), `HH_全記録_${todayStr}.csv`);
 }
 
 
