@@ -357,6 +357,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       </div>
     </div>
 
+    <!-- 出荷先マスター -->
+    <div class="card">
+      <div class="ch">
+        <i class="ti ti-building-store" style="font-size:18px;color:var(--blue)"></i>
+        <span class="cht">出荷先マスター</span>
+        <span class="chs" id="dest-count">0件</span>
+      </div>
+      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px">
+          <input type="text" class="inp" id="dest-new-name"
+            placeholder="出荷先名を入力（例：〇〇農協）"
+            style="flex:1"
+            onkeydown="if(event.key==='Enter')addDest()">
+          <button class="btn btn-g" style="margin-top:0;white-space:nowrap;padding:0 14px"
+            onclick="addDest()">
+            <i class="ti ti-plus"></i> 追加
+          </button>
+        </div>
+        <div id="dest-list" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+    </div>
+
     <!-- 出荷登録 -->
     <div class="card">
       <div class="ch">
@@ -747,6 +769,8 @@ function regLot(){
   lots.push(lot);
   renderLots();
   updateCtLotSel();
+  loadDestsLocal();
+  renderDestList();
   updateShipDestSel();
   updateShipLotSel();
   addLog('ok', `ロット登録: ${mfgid} (${prod})`);
@@ -1316,6 +1340,66 @@ function renderShipList() {
         <div style="font-size:11px;color:var(--text2)">${r.date}</div>
       </div>
     </div>`).join('');
+}
+
+
+// ── 出荷先マスター管理 ──────────────────────────────────
+function renderDestList() {
+  const list  = document.getElementById('dest-list');
+  const count = document.getElementById('dest-count');
+  if(!list) return;
+  count.textContent = shipDests.length + '件';
+  if(!shipDests.length) {
+    list.innerHTML = '<div style="padding:8px;text-align:center"><span class="empty-msg">出荷先が登録されていません</span></div>';
+    return;
+  }
+  list.innerHTML = shipDests.map((d, i) => `
+    <div style="display:flex;align-items:center;padding:8px 10px;background:var(--bg2);border-radius:var(--radius);gap:8px">
+      <i class="ti ti-building-store" style="color:var(--blue);font-size:14px;flex-shrink:0"></i>
+      <span style="flex:1;font-size:13px;color:var(--text)">${d}</span>
+      <button onclick="deleteDest(${i})"
+        style="background:none;border:none;cursor:pointer;color:var(--text2);padding:2px 4px;font-size:13px">
+        <i class="ti ti-trash"></i>
+      </button>
+    </div>`).join('');
+}
+
+function addDest() {
+  const inp  = document.getElementById('dest-new-name');
+  const name = inp.value.trim();
+  if(!name) { alert('出荷先名を入力してください'); return; }
+  if(shipDests.includes(name)) { alert('同じ名前の出荷先がすでに登録されています'); return; }
+  shipDests.push(name);
+  inp.value = '';
+  renderDestList();
+  updateShipDestSel();
+  saveDestsLocal();
+  toast(`出荷先「${name}」を登録しました`);
+}
+
+function deleteDest(i) {
+  const name = shipDests[i];
+  if(!confirm(`「${name}」を削除しますか？`)) return;
+  shipDests.splice(i, 1);
+  renderDestList();
+  updateShipDestSel();
+  saveDestsLocal();
+  toast(`「${name}」を削除しました`);
+}
+
+function saveDestsLocal() {
+  try { localStorage.setItem('hh_ship_dests', JSON.stringify(shipDests)); } catch(e) {}
+}
+
+function loadDestsLocal() {
+  try {
+    const saved = localStorage.getItem('hh_ship_dests');
+    if(saved) {
+      const arr = JSON.parse(saved);
+      shipDests.length = 0;
+      arr.forEach(d => shipDests.push(d));
+    }
+  } catch(e) {}
 }
 
 </script>
