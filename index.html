@@ -561,6 +561,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 </div>
 
 <script>
+window.onerror=function(msg,src,line,col,err){const el=document.getElementById('toast');if(el){el.textContent='JSエラー 行'+line+': '+msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),8000);}return true;};
+
 const SUPABASE_URL='https://jqexliindtoiwwjpkroz.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxZXhsaWluZHRvaXd3anBrcm96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNDM0MjgsImV4cCI6MjA5NzgxOTQyOH0.8Croo0REQWfu0yYVsecd1ctKUs-8UrQCRPSOgYa_1c8';
 const FACTORY='HutteHayashi';
@@ -579,8 +581,10 @@ function fmtDisp(s){return`${s.slice(0,4)}年${s.slice(4,6)}月${s.slice(6,8)}�
 function fmtTime(d){return`${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`}
 function now(){return fmtTime(new Date())}
 
-document.getElementById('active-date').value=`${todayDate.getFullYear()}-${String(todayDate.getMonth()+1).padStart(2,'0')}-${String(todayDate.getDate()).padStart(2,'0')}`;
-document.getElementById('start-time').textContent=fmtTime(todayDate);
+try {
+  document.getElementById('active-date').value=`${todayDate.getFullYear()}-${String(todayDate.getMonth()+1).padStart(2,'0')}-${String(todayDate.getDate()).padStart(2,'0')}`;
+  document.getElementById('start-time').textContent=fmtTime(todayDate);
+} catch(e) { console.error('DOM init error:', e); }
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -1135,9 +1139,23 @@ function editDay(ds){selectCalDay(ds);showTab('temp',document.querySelectorAll('
 function calPrev(){if(calMonth===0){calMonth=11;calYear--;}else calMonth--;renderCal();}
 function calNext(){if(calMonth===11){calMonth=0;calYear++;}else calMonth++;renderCal();}
 
-renderCal();
-loadDateData(todayStr);
-loadFromCloud();
+try {
+  renderCal();
+  loadDateData(todayStr);
+  loadFromCloud();
+  updateShipDestSel();
+  updateShipLotSel();
+  loadDestsLocal();
+  renderDestList();
+} catch(e) {
+  const el = document.getElementById('toast');
+  if(el) {
+    el.textContent = '起動エラー: ' + e.message + ' (行' + (e.lineNumber||'?') + ')';
+    el.classList.add('show');
+    setTimeout(()=>el.classList.remove('show'), 10000);
+  }
+  console.error('Init error:', e);
+}
 
 // ── CSV出力関数 ────────────────────────────────────────────
 function toCSV(headers, rows) {
