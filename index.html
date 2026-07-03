@@ -166,7 +166,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       <div class="pbar"><div class="pfill" id="tp" style="width:0%"></div></div>
       <div class="row"><div class="rl">原料冷蔵庫<div class="rs">豚肉原料保管</div></div><input type="number" class="ti-inp" id="t1" placeholder="0.0" inputmode="decimal" oninput="chkTemp('t1','s1',5,'lt')"><span class="tu">℃</span><span class="badge" id="s1">—</span></div>
       <div class="row"><div class="rl">製品冷蔵庫<div class="rs">ハム・生ハム・精肉</div></div><input type="number" class="ti-inp" id="t2" placeholder="0.0" inputmode="decimal" oninput="chkTemp('t2','s2',5,'lt')"><span class="tu">℃</span><span class="badge" id="s2">—</span></div>
-      <div class="row"><div class="rl">冷凍庫<div class="rs">メンチカツ・冷凍品</div></div><input type="number" class="ti-inp" id="t3" placeholder="0.0" inputmode="decimal" oninput="chkTemp('t3','s3',-15,'lt')"><span class="tu">℃</span><span class="badge" id="s3">—</span></div>
+      <div class="row"><div class="rl">冷凍庫<div class="rs">メンチカツ・冷凍品</div></div><input type="number" class="ti-inp" id="t3" placeholder="-18.0" inputmode="text" min="-50" max="0" oninput="chkTemp('t3','s3',-15,'lt')"><span class="tu">℃</span><span class="badge" id="s3">—</span></div>
       <div class="row"><div class="rl">製造室室温</div><input type="number" class="ti-inp" id="t4" placeholder="0.0" inputmode="decimal" oninput="chkTemp('t4','s4',15,'lt')"><span class="tu">℃</span><span class="badge" id="s4">—</span></div>
     </div>
     <div class="card">
