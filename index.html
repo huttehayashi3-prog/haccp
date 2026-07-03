@@ -235,10 +235,69 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     <div class="card">
       <div class="ch"><i class="ti ti-plus" style="font-size:18px;color:var(--blue)"></i><span class="cht">新規ロット登録</span></div>
       <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-        <div><div class="lbl">製品種別</div><select class="sel-f" id="lot-prod"><option>ハム</option><option>ソーセージ</option><option>生ハム</option><option>サラミ</option><option>メンチカツ</option><option>精肉</option></select></div>
+        <!-- 製品選択 -->
+        <div>
+          <div class="lbl">製品名</div>
+          <select class="sel-f" id="lot-prod-sel" onchange="onProdChange()">
+            <option value="">-- 製品を選択 --</option>
+            <optgroup label="生ハム">
+              <option value="HH-GH-001|プロシュート">プロシュート</option>
+              <option value="HH-GH-002|コテレート">コテレート</option>
+              <option value="HH-GH-003|コッパ">コッパ</option>
+              <option value="HH-GH-004|パンチェッタ">パンチェッタ</option>
+              <option value="HH-GH-005|サラミ">サラミ</option>
+              <option value="HH-GH-006|白カビサラミ">白カビサラミ</option>
+            </optgroup>
+            <optgroup label="ハム">
+              <option value="HH-HA-001|ロースハム">ロースハム</option>
+              <option value="HH-HA-002|ボンレスハム">ボンレスハム</option>
+              <option value="HH-HA-003|ベーコン">ベーコン</option>
+              <option value="HH-HA-004|スモークタン">スモークタン</option>
+              <option value="HH-HA-005|スモークレバー">スモークレバー</option>
+              <option value="HH-HA-006|赤ジャーキー">赤ジャーキー</option>
+              <option value="HH-HA-007|黒ジャーキー">黒ジャーキー</option>
+            </optgroup>
+            <optgroup label="ソーセージ">
+              <option value="HH-SA-001|ポークウィンナー">ポークウィンナー</option>
+              <option value="HH-SA-002|あらびきウィンナー">あらびきウィンナー</option>
+              <option value="HH-SA-003|チョリソー">チョリソー</option>
+              <option value="HH-SA-004|ハーブウィンナー">ハーブウィンナー</option>
+              <option value="HH-SA-005|ぐるぐるソーセージ">ぐるぐるソーセージ</option>
+              <option value="HH-SA-006|骨付きフランク">骨付きフランク</option>
+              <option value="HH-SA-007|フランク">フランク</option>
+              <option value="HH-SA-008|ヴァイスブルスト">ヴァイスブルスト</option>
+              <option value="HH-SA-009|焼きソーセージ">焼きソーセージ</option>
+              <option value="HH-SA-010|ボロニアソーセージ">ボロニアソーセージ</option>
+              <option value="HH-SA-011|パプリカリオナ">パプリカリオナ</option>
+              <option value="HH-SA-012|ハーブソーセージ">ハーブソーセージ</option>
+              <option value="HH-SA-013|ケーゼ">ケーゼ</option>
+            </optgroup>
+            <optgroup label="メンチ">
+              <option value="HH-ME-001|メンチ">メンチ</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- 製造ロット番号（自動生成） -->
+        <div>
+          <div class="lbl">製造ロット番号</div>
+          <input type="text" class="inp" id="lot-mfgid" readonly
+            style="background:var(--bg2);color:var(--text);font-family:monospace;font-size:13px"
+            placeholder="製品を選択すると自動生成">
+          <div style="font-size:11px;color:var(--text2);margin-top:3px">
+            <i class="ti ti-info-circle"></i> 製品コード＋製造日付＋連番（自動採番）
+          </div>
+        </div>
+
+        <!-- 製造日付（自動入力・変更可） -->
+        <div>
+          <div class="lbl">製造日付</div>
+          <input type="date" class="inp" id="lot-mfgdate" oninput="updateMfgId()">
+          <div style="font-size:11px;color:var(--text2);margin-top:3px">変更するとロット番号が更新されます</div>
+        </div>
+
         <div><div class="lbl">原料受入日</div><input type="date" class="inp" id="lot-indate"></div>
         <div><div class="lbl">原料ロット番号（林牧場）</div><input type="text" class="inp" id="lot-rawid" placeholder="例）HB-20260624-01"></div>
-        <div><div class="lbl">製造ロット番号</div><input type="text" class="inp" id="lot-mfgid" placeholder="例）HH-20260624-001"></div>
         <div><div class="lbl">製造数量</div><input type="number" class="inp" id="lot-qty" placeholder="例）50" inputmode="numeric"></div>
         <div><div class="lbl">賞味期限</div><input type="date" class="inp" id="lot-exp"></div>
         <div><div class="lbl">出荷先（任意）</div><input type="text" class="inp" id="lot-dest" placeholder="例）直売所・〇〇店"></div>
@@ -596,7 +655,7 @@ function calcP(){
 function addLog(type,msg){
   const log=document.getElementById('event-log');const row=document.createElement('div');row.className='rec-row';
   const cls=type==='ok'?'ri-ok':type==='ng'?'ri-ng':'ri-w';const icon=type==='ok'?'ti-check':type==='ng'?'ti-alert-triangle':'ti-info-circle';
-  row.innerHTML=`<div class="rec-icon ${cls}"><i class="ti ${icon}"></i></div><div><div class="rec-text">${msg}</div><div class="rec-time">${fmtDisp(activeDate)} ${now()}</div></div>`;
+  row.innerHTML=`<div class="rec-icon ${cls}"><i class="ti ${icon}"></i></div><div><div class="rec-text">${msg}</div></div>`;
   log.appendChild(row);
 }
 function bumpNG(){
@@ -607,15 +666,98 @@ function bumpNG(){
 
 const lots=[];
 function regLot(){
-  const rawid=document.getElementById('lot-rawid').value;const mfgid=document.getElementById('lot-mfgid').value;
-  if(!mfgid||!rawid){alert('ロット番号を入力してください');return;}
-  const prod=document.getElementById('lot-prod').value;
-  const lot={prod,indate:document.getElementById('lot-indate').value,rawid,mfgid,qty:document.getElementById('lot-qty').value,exp:document.getElementById('lot-exp').value,dest:document.getElementById('lot-dest').value,date:activeDate};
-  lots.push(lot);renderLots();updateCtLotSel();addLog('ok',`ロット登録: ${mfgid} (${prod})`);
-  apiUpsert('haccp_lots',{...lot,factory:FACTORY});
-  document.getElementById('lot-mfgid').value='';document.getElementById('lot-rawid').value='';document.getElementById('lot-qty').value='';
-  toast('ロットを登録・同期しました');
+  const selVal = document.getElementById('lot-prod-sel').value;
+  const mfgid  = document.getElementById('lot-mfgid').value;
+  const rawid  = document.getElementById('lot-rawid').value;
+  if(!selVal){ alert('製品を選択してください'); return; }
+  if(!mfgid){  alert('製造ロット番号が生成されていません'); return; }
+  const prod = selVal.split('|')[1]; // 製品名
+  const code = selVal.split('|')[0]; // 製品コード
+  const lot = {
+    prod, code, mfgid, rawid,
+    indate: document.getElementById('lot-indate').value,
+    qty:    document.getElementById('lot-qty').value,
+    exp:    document.getElementById('lot-exp').value,
+    dest:   document.getElementById('lot-dest').value,
+    date:   activeDate
+  };
+  lots.push(lot);
+  renderLots();
+  updateCtLotSel();
+  addLog('ok', `ロット登録: ${mfgid} (${prod})`);
+  apiUpsert('haccp_lots', {...lot, factory: FACTORY});
+
+  // 連番を1つ増やして次のロット番号を準備
+  const seqEl = document.getElementById('lot-seq');
+  const nextSeq = String(parseInt(seqEl.value)+1).padStart(2,'0');
+  if(parseInt(nextSeq) <= 10) seqEl.value = nextSeq;
+  updateMfgId();
+
+  // 入力をリセット（製品選択・連番はキープ）
+  document.getElementById('lot-rawid').value='';
+  document.getElementById('lot-qty').value='';
+  document.getElementById('lot-exp').value='';
+  document.getElementById('lot-dest').value='';
+  toast(`ロット登録: ${mfgid}`);
 }
+// ── ロット番号自動生成 ──────────────────────────────────────
+function getDateStr(dateStr){
+  // "2026-07-03" → "20260703"
+  return (dateStr||activeDate).replace(/-/g,'');
+}
+
+function onProdChange(){
+  // 製造日付が未入力なら今日をセット
+  const mfgDateEl = document.getElementById('lot-mfgdate');
+  if(mfgDateEl && !mfgDateEl.value){
+    mfgDateEl.value = today();
+  }
+  updateMfgId();
+}
+
+function updateMfgId(){
+  const sel = document.getElementById('lot-prod-sel');
+  const val = sel.value; // "HH-GH-001|プロシュート"
+  if(!val){
+    document.getElementById('lot-mfgid').value='';
+    return;
+  }
+  const code = val.split('|')[0]; // "HH-GH-001"
+
+  // 製造日付：lot-mfgdateが設定されていればそれを使用、なければ今日
+  const mfgDateEl = document.getElementById('lot-mfgdate');
+  const mfgDate = mfgDateEl && mfgDateEl.value ? mfgDateEl.value : today();
+  const dateStr = mfgDate.replace(/-/g,''); // "20260703"
+
+  // 既存ロットから同じ製品コード＋日付のものを数えて連番を自動採番
+  const prefix = `${code}-${dateStr}-`;
+  const used = lots.filter(l => l.mfgid && l.mfgid.startsWith(prefix));
+  const seq = String(used.length + 1).padStart(2,'0');
+
+  document.getElementById('lot-mfgid').value = `${code}-${dateStr}-${seq}`;
+}
+
+function today(){
+  // 今日の日付をYYYY-MM-DD形式で返す
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+// 初期化：ページロード時に呼ぶ
+function initLotForm(){
+  // 製品未選択状態にリセット
+  document.getElementById('lot-prod-sel').value='';
+  document.getElementById('lot-seq').value='01';
+  document.getElementById('lot-mfgid').value='';
+  document.getElementById('lot-rawid').value='';
+  document.getElementById('lot-qty').value='';
+  // 原料受入日を今日にセット
+  document.getElementById('lot-indate').value=activeDate;
+}
+
 function renderLots(){
   const list=document.getElementById('lot-list');
   document.getElementById('lot-count').textContent=lots.length+'件';
