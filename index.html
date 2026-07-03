@@ -585,7 +585,7 @@ document.getElementById('start-time').textContent=fmtTime(todayDate);
 function toast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2400);
+  setTimeout(()=>t.classList.remove('show'),t.textContent.startsWith('⚠')?3200:2400);
 }
 function setSyncStatus(state){
   const dot=document.getElementById('sync-dot');
@@ -799,8 +799,8 @@ function regLot(){
   const selVal = document.getElementById('lot-prod-sel').value;
   const mfgid  = document.getElementById('lot-mfgid').value;
   const rawids = getRawLots(); // 複数原料ロット
-  if(!selVal){ alert('製品を選択してください'); return; }
-  if(!mfgid){  alert('製造ロット番号が生成されていません'); return; }
+  if(!selVal){ toast('⚠ 製品を選択してください'); return; }
+  if(!mfgid){  toast('⚠ ロット番号が生成されていません'); return; }
   const prod = selVal.split('|')[1]; // 製品名
   const code = selVal.split('|')[0]; // 製品コード
   const lot = {
@@ -950,8 +950,8 @@ async function saveCT() {
   const staff = document.getElementById('ct-staff').value;
   const note  = document.getElementById('ct-note').value;
 
-  if(!lotId) { alert('ロットを選択してください'); return; }
-  if(isNaN(temp)) { alert('中心温度を入力してください'); return; }
+  if(!lotId) { toast('⚠ ロットを選択してください'); return; }
+  if(isNaN(temp)) { toast('⚠ 中心温度を入力してください'); return; }
 
   const ok = temp >= 75;
   const rec = {
@@ -1047,7 +1047,7 @@ async function loadCTFromCloud() {
 function openNG(){document.getElementById('ng-modal-wrap').classList.add('open')}
 function closeNG(){document.getElementById('ng-modal-wrap').classList.remove('open')}
 async function submitNG(){
-  const desc=document.getElementById('ng-desc').value;if(!desc){alert('不適合内容を入力してください');return;}
+  const desc=document.getElementById('ng-desc').value;if(!desc){toast('⚠ 不適合内容を入力してください');return;}
   const loc=document.getElementById('ng-loc').value;
   addLog('ng',`不適合: [${loc}] ${desc.slice(0,20)}${desc.length>20?'…':''}`);
   bumpNG();
@@ -1344,9 +1344,9 @@ function regShip() {
   const date  = document.getElementById('ship-date').value || activeDate;
   const note  = document.getElementById('ship-note').value;
 
-  if(!dest)  { alert('出荷先を選択してください'); return; }
-  if(!lotId) { alert('ロット番号を選択してください'); return; }
-  if(!qty || parseInt(qty) < 1) { alert('出荷数量を入力してください'); return; }
+  if(!dest)  { toast('⚠ 出荷先を選択してください'); return; }
+  if(!lotId) { toast('⚠ ロット番号を選択してください'); return; }
+  if(!qty || parseInt(qty) < 1) { toast('⚠ 出荷数量を入力してください'); return; }
 
   const rec = { dest, lot_id: lotId, qty: parseInt(qty), date, note,
                 recorded_at: new Date().toISOString() };
@@ -1415,8 +1415,8 @@ function renderDestList() {
 function addDest() {
   const inp  = document.getElementById('dest-new-name');
   const name = inp.value.trim();
-  if(!name) { alert('出荷先名を入力してください'); return; }
-  if(shipDests.includes(name)) { alert('同じ名前の出荷先がすでに登録されています'); return; }
+  if(!name) { toast('⚠ 出荷先名を入力してください'); return; }
+  if(shipDests.includes(name)) { toast('⚠ 同じ出荷先が既に登録されています'); return; }
   shipDests.push(name);
   inp.value = '';
   renderDestList();
@@ -1427,7 +1427,7 @@ function addDest() {
 
 function deleteDest(i) {
   const name = shipDests[i];
-  if(!confirm(`「${name}」を削除しますか？`)) return;
+  // confirm()はiOS PWAで動作しないため削除確認を省略
   shipDests.splice(i, 1);
   renderDestList();
   updateShipDestSel();
@@ -1472,13 +1472,13 @@ function addRawLot(){
   const buiv = document.getElementById('raw-buiv').value;
   const date = document.getElementById('raw-date').value;
   const seq  = document.getElementById('raw-seq').value;
-  if(!buiv){ alert('部位を選択してください'); return; }
-  if(!date){ alert('日付を選択してください'); return; }
-  if(!seq){  alert('連番を入力してください'); return; }
+  if(!buiv){ toast('⚠ 部位を選択してください'); return; }
+  if(!date){ toast('⚠ 日付を選択してください'); return; }
+  if(!seq){  toast('⚠ 連番を入力してください'); return; }
   const dateStr = date.replace(/-/g,'');
   const seqStr  = String(seq).padStart(2,'0');
   const lotId   = `${buiv}-${dateStr}-${seqStr}`;
-  if(rawLotList.includes(lotId)){ alert('同じロット番号が既に追加されています'); return; }
+  if(rawLotList.includes(lotId)){ toast('⚠ 同じロット番号が既に追加されています'); return; }
   rawLotList.push(lotId);
   renderRawLotList();
   // 連番をクリアして次の入力に備える
