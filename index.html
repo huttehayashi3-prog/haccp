@@ -297,7 +297,45 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
         </div>
 
         <div><div class="lbl">原料受入日</div><input type="date" class="inp" id="lot-indate"></div>
-        <div><div class="lbl">原料ロット番号（林牧場）</div><input type="text" class="inp" id="lot-rawid" placeholder="例）HB-20260624-01"></div>
+        <!-- 原料ロット番号（複数登録可） -->
+        <div>
+          <div class="lbl">原料ロット番号（林牧場）</div>
+
+          <!-- 入力エリア -->
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+            <!-- 部位選択 -->
+            <select class="sel-f" id="raw-buiv">
+              <option value="">-- 部位を選択 --</option>
+              <option value="HB-RL">ロース（HB-RL）</option>
+              <option value="HB-KR">肩ロース（HB-KR）</option>
+              <option value="HB-BR">バラ（HB-BR）</option>
+              <option value="HB-HI">ヒレ（HB-HI）</option>
+              <option value="HB-MM">モモ（HB-MM）</option>
+              <option value="HB-UD">ウデ（HB-UD）</option>
+              <option value="HB-ST">セット（HB-ST）</option>
+              <option value="HB-LV">レバー（HB-LV）</option>
+              <option value="HB-TN">タン（HB-TN）</option>
+            </select>
+            <!-- 日付 + 連番 -->
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="date" class="inp" id="raw-date" style="flex:1">
+              <span style="color:var(--text2);font-size:13px">-</span>
+              <input type="number" class="inp" id="raw-seq"
+                placeholder="01" min="1" max="99" inputmode="numeric"
+                style="width:60px;text-align:center">
+            </div>
+            <!-- プレビュー -->
+            <div id="raw-preview" style="font-size:12px;color:var(--text2);font-family:monospace;min-height:18px"></div>
+            <button type="button" class="btn btn-o" style="margin-top:0"
+              onclick="addRawLot()">
+              <i class="ti ti-plus"></i> この原料ロットを追加
+            </button>
+          </div>
+
+          <!-- 追加済みリスト -->
+          <div id="raw-lot-list" style="display:flex;flex-direction:column;gap:4px"></div>
+          <div style="font-size:11px;color:var(--text2);margin-top:3px">※ 複数の部位を使う場合は続けて追加してください</div>
+        </div>
         <div><div class="lbl">製造数量</div><input type="number" class="inp" id="lot-qty" placeholder="例）50" inputmode="numeric"></div>
         <div><div class="lbl">賞味期限</div><input type="date" class="inp" id="lot-exp"></div>
         <button class="btn btn-g" onclick="regLot()"><i class="ti ti-plus"></i> ロットを登録</button>
@@ -664,6 +702,12 @@ function onDateChange(){
   const v=document.getElementById('active-date').value;
   if(!v)return;
   const p=v.split('-');activeDate=p[0]+p[1]+p[2];
+  // 製造日付フィールドを選択日付に更新（未入力または空の場合も含め常に同期）
+  const mfgDateEl=document.getElementById('lot-mfgdate');
+  if(mfgDateEl) mfgDateEl.value=v;
+  const rawDateEl=document.getElementById('raw-date');
+  if(rawDateEl){ rawDateEl.value=v; updateRawPreview(); }
+  updateMfgId();
   const isPast=activeDate!==todayStr;
   document.getElementById('past-label').style.display=isPast?'':'none';
   document.getElementById('past-banner').classList.toggle('show',isPast);
@@ -754,13 +798,13 @@ const shipments=[];
 function regLot(){
   const selVal = document.getElementById('lot-prod-sel').value;
   const mfgid  = document.getElementById('lot-mfgid').value;
-  const rawid  = document.getElementById('lot-rawid').value;
+  const rawids = getRawLots(); // 複数原料ロット
   if(!selVal){ alert('製品を選択してください'); return; }
   if(!mfgid){  alert('製造ロット番号が生成されていません'); return; }
   const prod = selVal.split('|')[1]; // 製品名
   const code = selVal.split('|')[0]; // 製品コード
   const lot = {
-    prod, code, mfgid, rawid,
+    prod, code, mfgid, rawid: rawids.join(' / '),
     indate: document.getElementById('lot-indate').value,
     qty:    document.getElementById('lot-qty').value,
     exp:    document.getElementById('lot-exp').value,
@@ -776,14 +820,11 @@ function regLot(){
   addLog('ok', `ロット登録: ${mfgid} (${prod})`);
   apiUpsert('haccp_lots', {...lot, factory: FACTORY});
 
-  // 連番を1つ増やして次のロット番号を準備
-  const seqEl = document.getElementById('lot-seq');
-  const nextSeq = String(parseInt(seqEl.value)+1).padStart(2,'0');
-  if(parseInt(nextSeq) <= 10) seqEl.value = nextSeq;
+  // 登録後に次のロット番号を更新（自動採番）
   updateMfgId();
 
   // 入力をリセット（製品選択・連番はキープ）
-  document.getElementById('lot-rawid').value='';
+  clearRawLots();
   document.getElementById('lot-qty').value='';
   document.getElementById('lot-exp').value='';
   toast(`ロット登録: ${mfgid}`);
@@ -795,10 +836,12 @@ function getDateStr(dateStr){
 }
 
 function onProdChange(){
-  // 製造日付が未入力なら今日をセット
+  // 製造日付が未入力なら選択中の日付をセット（過去日付に遡っている場合はその日付）
   const mfgDateEl = document.getElementById('lot-mfgdate');
   if(mfgDateEl && !mfgDateEl.value){
-    mfgDateEl.value = today();
+    // activeDate は "YYYYMMDD" 形式 → "YYYY-MM-DD" に変換
+    const ad = activeDate;
+    mfgDateEl.value = `${ad.slice(0,4)}-${ad.slice(4,6)}-${ad.slice(6,8)}`;
   }
   updateMfgId();
 }
@@ -838,12 +881,19 @@ function today(){
 function initLotForm(){
   // 製品未選択状態にリセット
   document.getElementById('lot-prod-sel').value='';
-  document.getElementById('lot-seq').value='01';
   document.getElementById('lot-mfgid').value='';
-  document.getElementById('lot-rawid').value='';
+  clearRawLots();
   document.getElementById('lot-qty').value='';
-  // 原料受入日を今日にセット
-  document.getElementById('lot-indate').value=activeDate;
+  document.getElementById('lot-exp').value='';
+  // 原料受入日・製造日付を選択中の日付にセット
+  const ad=activeDate;
+  const adStr=`${ad.slice(0,4)}-${ad.slice(4,6)}-${ad.slice(6,8)}`;
+  document.getElementById('lot-indate').value=adStr;
+  const mfgDateEl=document.getElementById('lot-mfgdate');
+  if(mfgDateEl) mfgDateEl.value=adStr;
+  const rawDateEl=document.getElementById('raw-date');
+  if(rawDateEl) rawDateEl.value=adStr;
+  clearRawLots();
 }
 
 function renderLots(){
@@ -1398,6 +1448,79 @@ function loadDestsLocal() {
       arr.forEach(d => shipDests.push(d));
     }
   } catch(e) {}
+}
+
+
+// ── 原料ロット番号管理 ──────────────────────────────────
+const rawLotList = [];
+
+function updateRawPreview(){
+  const buiv = document.getElementById('raw-buiv').value;
+  const date = document.getElementById('raw-date').value;
+  const seq  = document.getElementById('raw-seq').value;
+  const prev = document.getElementById('raw-preview');
+  if(!buiv || !date || !seq){
+    prev.textContent = buiv && date ? `${buiv}-${date.replace(/-/g,'')}-??` : '部位・日付・連番を入力してください';
+    return;
+  }
+  const dateStr = date.replace(/-/g,'');
+  const seqStr  = String(seq).padStart(2,'0');
+  prev.textContent = `${buiv}-${dateStr}-${seqStr}`;
+}
+
+function addRawLot(){
+  const buiv = document.getElementById('raw-buiv').value;
+  const date = document.getElementById('raw-date').value;
+  const seq  = document.getElementById('raw-seq').value;
+  if(!buiv){ alert('部位を選択してください'); return; }
+  if(!date){ alert('日付を選択してください'); return; }
+  if(!seq){  alert('連番を入力してください'); return; }
+  const dateStr = date.replace(/-/g,'');
+  const seqStr  = String(seq).padStart(2,'0');
+  const lotId   = `${buiv}-${dateStr}-${seqStr}`;
+  if(rawLotList.includes(lotId)){ alert('同じロット番号が既に追加されています'); return; }
+  rawLotList.push(lotId);
+  renderRawLotList();
+  // 連番をクリアして次の入力に備える
+  document.getElementById('raw-seq').value = '';
+  document.getElementById('raw-buiv').focus();
+  updateRawPreview();
+}
+
+function removeRawLot(i){
+  rawLotList.splice(i, 1);
+  renderRawLotList();
+}
+
+function renderRawLotList(){
+  const el = document.getElementById('raw-lot-list');
+  if(!el) return;
+  if(!rawLotList.length){
+    el.innerHTML='';
+    return;
+  }
+  el.innerHTML = rawLotList.map((id,i) => `
+    <div style="display:flex;align-items:center;padding:6px 8px;background:var(--bg2);border-radius:var(--radius);gap:8px">
+      <i class="ti ti-package" style="color:var(--blue);font-size:13px;flex-shrink:0"></i>
+      <span style="flex:1;font-size:13px;font-family:monospace;color:var(--text)">${id}</span>
+      <button onclick="removeRawLot(${i})"
+        style="background:none;border:none;cursor:pointer;color:var(--text2);padding:2px 4px">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>`).join('');
+}
+
+function getRawLots(){
+  return rawLotList.length ? [...rawLotList] : ['(未入力)'];
+}
+
+function clearRawLots(){
+  rawLotList.length = 0;
+  renderRawLotList();
+  document.getElementById('raw-buiv').value = '';
+  document.getElementById('raw-date').value = '';
+  document.getElementById('raw-seq').value  = '';
+  updateRawPreview();
 }
 
 </script>
